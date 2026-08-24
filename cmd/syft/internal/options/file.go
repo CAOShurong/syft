@@ -71,7 +71,7 @@ Options include:
  - "none", "": do not capture any files`)
 	descriptions.Add(&c.Metadata.Digests, `the file digest algorithms to use when cataloging files (options: "md5", "sha1", "sha224", "sha256", "sha384", "sha512")`)
 
-	descriptions.Add(&c.Content.SkipFilesAboveSize, `skip searching a file entirely if it is above the given size (default = 1MB; unit = bytes)`)
+	descriptions.Add(&c.Content.SkipFilesAboveSize, `skip searching a file entirely if it is above the given size (default = 250KB; unit = bytes)`)
 	descriptions.Add(&c.Content.Globs, `file globs for the cataloger to match on`)
 
 	descriptions.Add(&c.Executable.Globs, `file globs for the cataloger to match on`)
