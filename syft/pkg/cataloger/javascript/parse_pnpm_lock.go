@@ -86,7 +86,11 @@ func newGenericPnpmLockAdapter(cfg CatalogerConfig) genericPnpmLockAdapter {
 // Parse implements the pnpmLockfileParser interface for v6-v8 lockfiles.
 func (p *pnpmV6LockYaml) Parse(version float64, doc *yaml.Node) ([]pnpmPackage, error) {
 	if err := doc.Decode(p); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal pnpm v6 lockfile: %w", err)
+		var typeErr *yaml.TypeError
+		if !errors.As(err, &typeErr) {
+			return nil, fmt.Errorf("failed to unmarshal pnpm v6 lockfile: %w", err)
+		}
+		log.WithFields("error", err).Trace("partially decoded pnpm v6 lockfile")
 	}
 
 	isV5 := version < 6.0
@@ -147,7 +151,11 @@ func (p *pnpmV6LockYaml) Parse(version float64, doc *yaml.Node) ([]pnpmPackage, 
 // Parse implements the PnpmLockfileParser interface for v9+ lockfiles.
 func (p *pnpmV9LockYaml) Parse(_ float64, doc *yaml.Node) ([]pnpmPackage, error) {
 	if err := doc.Decode(p); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal pnpm v9 lockfile: %w", err)
+		var typeErr *yaml.TypeError
+		if !errors.As(err, &typeErr) {
+			return nil, fmt.Errorf("failed to unmarshal pnpm v9 lockfile: %w", err)
+		}
+		log.WithFields("error", err).Trace("partially decoded pnpm v9 lockfile")
 	}
 
 	packages := make(map[string]pnpmPackage)

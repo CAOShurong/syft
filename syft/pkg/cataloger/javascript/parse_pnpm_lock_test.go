@@ -418,6 +418,78 @@ func TestParsePnpmLockV9(t *testing.T) {
 	pkgtest.TestFileParser(t, fixture, adapter.parsePnpmLock, expected, expectedRelationships)
 }
 
+// pnpm's provisioned runtimes use a sequence for resolution.variants, which cannot be
+// represented by the parser's map[string]string field. A yaml.TypeError for that entry
+// must not discard the other packages in the lockfile.
+func TestParsePnpmLock_ToleratesUnsupportedResolution(t *testing.T) {
+	tests := []struct {
+		name     string
+		lockfile string
+	}{
+		{
+			name: "v6",
+			lockfile: `lockfileVersion: '6.0'
+dependencies:
+  is-odd: 3.0.1
+packages:
+  /is-odd@3.0.1:
+    resolution: {integrity: sha512-valid}
+  /node@runtime:26.8.1:
+    resolution:
+      type: variations
+      variants:
+        - resolution:
+            archive: tarball
+            type: binary
+          targets:
+            - cpu: x64
+              os: linux
+    version: 26.8.1
+`,
+		},
+		{
+			name: "v9",
+			lockfile: `lockfileVersion: '9.0'
+packages:
+  /is-odd@3.0.1:
+    resolution: {integrity: sha512-valid}
+  /node@runtime:26.8.1:
+    resolution:
+      type: variations
+      variants:
+        - resolution:
+            archive: tarball
+            type: binary
+          targets:
+            - cpu: x64
+              os: linux
+    version: 26.8.1
+snapshots:
+  /is-odd@3.0.1: {}
+  /node@runtime:26.8.1: {}
+`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			adapter := newGenericPnpmLockAdapter(CatalogerConfig{IncludeDevDependencies: true})
+			pkgs, _, err := adapter.parsePnpmLock(context.Background(), nil, nil, file.LocationReadCloser{
+				Location:   file.NewLocation("pnpm-lock.yaml"),
+				ReadCloser: io.NopCloser(strings.NewReader(tt.lockfile)),
+			})
+			require.NoError(t, err)
+
+			var got []string
+			for _, p := range pkgs {
+				got = append(got, p.Name+"@"+p.Version)
+			}
+			sort.Strings(got)
+			assert.Equal(t, []string{"is-odd@3.0.1", "node@runtime:26.8.1"}, got)
+		})
+	}
+}
+
 func TestParsePnpmLockV9WithDependencies(t *testing.T) {
 	adapter := newGenericPnpmLockAdapter(CatalogerConfig{})
 	fixture := "testdata/pnpm-v9-snapshots/pnpm-lock.yaml"
